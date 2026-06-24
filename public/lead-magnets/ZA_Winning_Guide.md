@@ -1,0 +1,1 @@
+/home/team/shared/lead-magnets/ZA_Winning_Guide.md
