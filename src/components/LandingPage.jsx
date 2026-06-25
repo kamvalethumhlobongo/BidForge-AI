@@ -20,9 +20,18 @@ const LandingPage = () => {
   const [downloadEmail, setDownloadEmail] = useState('');
   const [downloadIndustry, setDownloadEmailIndustry] = useState('logistics');
 
-  const handlePricingClick = (plan) => {
+  const handlePricingClick = async (plan) => {
     setSelectedPlan(plan);
     setShowModal(true);
+    // Live intent alert
+    try {
+      await axios.post('/api/alerts', {
+        type: 'intent',
+        message: `INTENT TO BUY: Someone just clicked on the "${plan}" package.`
+      });
+    } catch (e) {
+      console.warn('Silent fail for intent alert:', e.message);
+    }
   };
 
   const handleDownload = async (industry, resourceName) => {
@@ -66,6 +75,15 @@ const LandingPage = () => {
         source: 'landing_page'
       });
       const leadId = response.data.id;
+      // Live conversion alert
+      try {
+        await axios.post('/api/alerts', {
+          type: 'conversion',
+          message: `NEW LEAD CAPTURED: ${formData.name} (${formData.email}) has just completed the intake for the "${selectedPlan}" package.`
+        });
+      } catch (e) {
+        console.warn('Silent fail for conversion alert:', e.message);
+      }
       setSubmitting(false);
       setShowModal(false);
       navigate('/checkout', { state: { plan: selectedPlan, formData, leadId } });
@@ -116,8 +134,12 @@ const LandingPage = () => {
       a: 'Logistics & Transport, Construction, Security, Cleaning & Facilities Management, and Government Supply. We add new industries monthly.'
     },
     {
+      q: 'How do I pay for my proposal?',
+      a: 'We exclusively accept Secure EFT (Direct Bank Transfer). This ensures maximum transparency, security for high-value corporate funds, and full compliance for government tender documentation.'
+    },
+    {
       q: 'How fast can I get my proposal?',
-      a: 'Standard delivery is within 24 hours. Premium subscribers get priority 12-hour turnaround.'
+      a: 'Standard delivery is within 24 hours of payment verification. Premium subscribers get priority 12-hour turnaround.'
     },
     {
       q: 'Is the content original or templated?',
@@ -126,10 +148,6 @@ const LandingPage = () => {
     {
       q: 'Can I edit the document after receiving it?',
       a: 'Absolutely. You get editable DOCX files plus PDF. Customise as much as you want.'
-    },
-    {
-      q: 'What if I\'m not satisfied?',
-      a: 'We offer free revisions within 48 hours. If we can\'t make it right, you don\'t pay.'
     },
     {
       q: 'Do you handle the full submission?',
@@ -464,8 +482,11 @@ const LandingPage = () => {
                         : 'bg-brand-blue text-white hover:bg-brand-blue-dark'
                     }`}
                   >
-                    Select Plan
+                    Pay via Secure EFT
                   </button>
+                  <p className="text-[10px] text-center text-slate-400 mt-3 font-medium flex items-center justify-center gap-1">
+                    <span className="text-emerald-500">🛡️</span> Standard Bank Verified EFT
+                  </p>
                 </div>
               </div>
             ))}
@@ -808,3 +829,21 @@ const LandingPage = () => {
   );
 };
 export default LandingPage;
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'

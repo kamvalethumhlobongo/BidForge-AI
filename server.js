@@ -26,6 +26,23 @@ const runQuery = async (query) => {
   return JSON.parse(stdout);
 };
 
+// Helper for audit logging
+const logAudit = async (orderId, oldStatus, newStatus, changedBy = 'system') => {
+  const id = uuidv4();
+  const sql = `INSERT INTO payment_audit (id, order_id, old_status, new_status, changed_by) VALUES ('${id}', '${orderId}', '${oldStatus}', '${newStatus}', '${changedBy}')`;
+  await runQuery(sql);
+};
+
+// Helper for reference generation
+const generateReference = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let ref = 'BF-';
+  for (let i = 0; i < 4; i++) {
+    ref += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return ref;
+};
+
 // Helper to log notifications
 const logNotification = async (leadId, type, message) => {
   console.log(`[NOTIFICATION] ${type}: ${message}`);
@@ -175,9 +192,14 @@ const upload = multer({ storage });
 app.post('/api/orders', async (req, res) => {
   const { lead_id, plan_type, amount } = req.body;
   const id = uuidv4();
+  const reference = generateReference();
   try {
-    const sql = `INSERT INTO orders (id, lead_id, plan_type, amount) VALUES ('${id}', '${lead_id}', '${plan_type}', ${amount})`;
+    const sql = `INSERT INTO orders (id, lead_id, plan_type, amount, reference, status) VALUES ('${id}', '${lead_id}', '${plan_type}', ${amount}, '${reference}', 'pending')`;
     await runQuery(sql);
+    
+    // Initial Audit
+    await logAudit(id, 'none', 'pending');
+
     res.status(201).json({ 
       id, 
       bank_details: {
@@ -185,7 +207,7 @@ app.post('/api/orders', async (req, res) => {
         account_name: 'Logistiqs AI',
         account_number: '10243855972',
         branch_code: '051001',
-        reference: id
+        reference: reference
       }
     });
   } catch (error) {
@@ -197,11 +219,17 @@ app.post('/api/orders/:id/upload-pop', upload.single('pop'), async (req, res) =>
   const { id } = req.params;
   const pop_path = req.file.path;
   try {
+    const orders = await runQuery(`SELECT status FROM orders WHERE id = '${id}'`);
+    const oldStatus = orders.length > 0 ? orders[0].status : 'unknown';
+
     const sql = `UPDATE orders SET pop_path = '${pop_path}', status = 'paid' WHERE id = '${id}'`;
     await runQuery(sql);
     
+    // Audit Status Change
+    await logAudit(id, oldStatus, 'paid', 'user');
+
     // Notify Marketer
-    const message = `PAYMENT RECEIVED: Order ${id} PoP uploaded. Please verify.`;
+    const message = `PAYMENT RECEIVED: Order ${id} (Ref: ${id.substring(0,8)}) PoP uploaded. Please verify.`;
     const query = `INSERT INTO inbox (id, from_agent, to_agent, body) VALUES ('${uuidv4()}', 'system', 'agent-marketer', '${message}')`;
     await execPromise(`team-db "${query}"`);
     
@@ -233,12 +261,33 @@ app.get('/api/admin/orders', async (req, res) => {
 
 app.patch('/api/admin/orders/:id/status', async (req, res) => {
   const { id } = req.params;
-  const { status } = req.body;
+  const { status, changed_by } = req.body;
   try {
+    const orders = await runQuery(`SELECT status FROM orders WHERE id = '${id}'`);
+    const oldStatus = orders.length > 0 ? orders[0].status : 'unknown';
+
     const sql = `UPDATE orders SET status = '${status}' WHERE id = '${id}'`;
     await runQuery(sql);
+
+    // Audit Status Change
+    await logAudit(id, oldStatus, status, changed_by || 'admin');
+
     res.json({ message: `Order status updated to ${status}` });
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/alerts', async (req, res) => {
+  const { type, message } = req.body;
+  try {
+    const leadQuery = `INSERT INTO inbox (id, from_agent, to_agent, body) VALUES ('${uuidv4()}', 'system', 'agent-lead', '${message.replace(/'/g, "''")}')`;
+    const marketerQuery = `INSERT INTO inbox (id, from_agent, to_agent, body) VALUES ('${uuidv4()}', 'system', 'agent-marketer', '${message.replace(/'/g, "''")}')`;
+    await execPromise(`team-db "${leadQuery}"`);
+    await execPromise(`team-db "${marketerQuery}"`);
+    res.json({ message: 'Alert sent' });
+  } catch (error) {
+    console.error('Error sending alert:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -246,3 +295,27 @@ app.patch('/api/admin/orders/:id/status', async (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://0.0.0.0:${PORT}`);
 });
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
